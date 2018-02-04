@@ -1,11 +1,13 @@
 
-from datatypes.Type import Type
+from ..Type import Type
 
 
 class String(Type):
-    @staticmethod
-    def convert(value):
-        if isinstance(value, str):
+    _python_type = str
+    
+    @classmethod
+    def convert(cls, value):
+        if isinstance(value, cls.python_type):
             return value
 
         raise TypeError('Expected a string, got {}'.format(type(value)))

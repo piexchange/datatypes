@@ -1,15 +1,17 @@
 
 from datetime import datetime
 
-from datatypes.Type import Type
+from ..Type import Type
 
 
 class Datetime(Type):
+    _python_type = datetime
+
     def __init__(self, format=None, timezone=None):
         self.format = format
         self.timezone = timezone
 
-    def convert(self, value):
+    def parse(self, value):
         if isinstance(value, str):
             return datetime.strptime(value, self.format)
 

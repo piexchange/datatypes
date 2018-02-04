@@ -11,6 +11,10 @@ class _TypeMeta(type):
 
         return cls
 
+    @property
+    def python_type(cls):
+        return getattr(cls, '_python_type', None)
+
 
 class Type(metaclass=_TypeMeta):
     @classmethod
@@ -20,6 +24,10 @@ class Type(metaclass=_TypeMeta):
 
         return issubclass(cls, type_.__class__)
 
+    @property
+    def python_type(self):
+        return type(self).python_type
+
     @classmethod
-    def convert(cls, value):
+    def parse(cls, value):
         raise NotImplementedError

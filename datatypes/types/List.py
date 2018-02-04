@@ -6,7 +6,9 @@ from ..util import Converter
 
 
 class List(Collection):
-    def convert(self, value):
+    _python_type = list
+
+    def parse(self, value):
         if isinstance(value, list):
             pass
         elif isinstance(value, (str, bytes)):

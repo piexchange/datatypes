@@ -1,8 +1,12 @@
 
+import io
+
 from datatypes.Type import Type
 
 
 class File(Type):
+    _python_type = io.IOBase
+
     @staticmethod
     def convert(value):
         if isinstance(value, str):

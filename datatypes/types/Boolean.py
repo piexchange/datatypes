@@ -3,8 +3,10 @@ from datatypes.Type import Type
 
 
 class Boolean(Type):
+    _python_type = bool
+
     @staticmethod
-    def convert(value):
+    def parse(value):
         if isinstance(value, bool):
             return value
 

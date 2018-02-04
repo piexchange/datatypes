@@ -6,6 +6,7 @@ from .Collection import Collection
 from .Datetime import Datetime
 from .File import File
 from .FilePath import FilePath
+from .Integer import Integer
 from .List import List
 from .Map import Map
 from .NaturalNumber import NaturalNumber
