@@ -1,33 +1,33 @@
 
-from ..Type import Type
+from ..type import Type
 
 __all__ = ['Converter']
 
 
 class Converter:
-    def __new__(cls, type):
-        if issubclass(type, Type):
-            return type
+    def __new__(cls, type_):
+        if issubclass(type_, Type):
+            return type_
 
-        return super().__new__(cls)  # constructor is called implicitly
+        return super().__new__(cls)
 
-    def __init__(self, type):
-        self.converter_func = _find_converter_func(type)
+    def __init__(self, type_):
+        self.converter_func = _find_converter_func(type_)
 
     def convert(self, value):
         return self.converter_func(value)
 
 
-def _find_converter_func(type):
+def _find_converter_func(type_):
     try:
-        return type._converter_func
+        return type_._converter_func
     except AttributeError:
-        return _DefaultConverter(type)
+        return _DefaultConverter(type_)
 
 
 class _DefaultConverter:
-    def __init__(self, type):
-        self.type = type
+    def __init__(self, type_):
+        self.type = type_
 
     def __call__(self, value):
         if isinstance(value, self.type):

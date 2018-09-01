@@ -1,7 +1,6 @@
 
 from .Any import Any
 from .Boolean import Boolean
-from .Choice import Choice
 from .Collection import Collection
 from .Datetime import Datetime
 from .File import File

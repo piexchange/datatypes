@@ -1,11 +1,13 @@
 
-from datatypes.Type import Type
+import os
+
+from ..type import Type
 
 
 class FilePath(Type):
     @staticmethod
     def convert(value):
-        if isinstance(value, str):
+        if isinstance(value, (str, os.Pathlike)):
             return value
 
         raise TypeError('Expected a file path, got {}'.format(type(value)))

@@ -1,8 +1,8 @@
 
-from datatypes.Type import Type
+from datatypes.type import Type
 
 
 class Any(Type):
     @staticmethod
-    def convert(value):
+    def parse(value):
         return value

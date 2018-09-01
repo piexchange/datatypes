@@ -1,16 +1,16 @@
 
 import re
 
-from datatypes.Type import Type
+from ..type import Type
 
 
 class RegexPattern(Type):
     @staticmethod
-    def convert(value):
+    def parse(value):
         if isinstance(value, str):
             return re.compile(value)
 
-        if isinstance(value, re._pattern_type):
+        if isinstance(value, re.Pattern):
             return value
 
         raise TypeError('Expected a string, got {}'.format(type(value)))

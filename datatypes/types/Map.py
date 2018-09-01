@@ -2,7 +2,6 @@
 import collections
 
 from .Collection import Collection
-from ..util import Converter
 
 
 class Map(Collection):

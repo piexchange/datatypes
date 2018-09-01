@@ -1,5 +1,5 @@
 
-from datatypes.Type import Type
+from ..type import Type
 
 
 class String(Type):
@@ -7,5 +7,6 @@ class String(Type):
     def convert(value):
         if isinstance(value, str):
             return value
-
-        raise TypeError('Expected a string, got {}'.format(type(value)))
+        
+        return str(value)
+        #~ raise TypeError('Expected a string, got {}'.format(type(value)))

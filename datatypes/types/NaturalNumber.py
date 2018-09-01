@@ -1,10 +1,10 @@
 
-from datatypes.Type import Type
+from ..type import Type
 
 
 class NaturalNumber(Type):
     @staticmethod
-    def convert(value):
+    def parse(value):
         if isinstance(value, str):
             try:
                 value = int(value)

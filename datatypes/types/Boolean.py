@@ -1,10 +1,10 @@
 
-from datatypes.Type import Type
+from datatypes.type import Type
 
 
 class Boolean(Type):
     @staticmethod
-    def convert(value):
+    def parse(value):
         if isinstance(value, bool):
             return value
 

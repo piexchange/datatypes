@@ -1,15 +1,15 @@
 
 from datetime import datetime
 
-from datatypes.Type import Type
+from ..type import Type
 
 
-class Datetime(Type):
+class Datetime(Type):  #FIXME
     def __init__(self, format=None, timezone=None):
         self.format = format
         self.timezone = timezone
 
-    def convert(self, value):
+    def parse(self, value):
         if isinstance(value, str):
             return datetime.strptime(value, self.format)
 
