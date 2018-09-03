@@ -9,7 +9,7 @@ class Converter:
         if issubclass(type_, Type):
             return type_
 
-        return super().__new__(cls)  # constructor is called implicitly
+        return super().__new__(cls)
 
     def __init__(self, type_):
         self.converter_func = _find_converter_func(type_)
