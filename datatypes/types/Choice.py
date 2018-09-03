@@ -1,8 +1,8 @@
 
-from ..Type import Type
+from ..type import Type
 
 
-class Choice(Type):
+class Choice(Type):  # FIXME: This isn't really a data type
     def __init__(self, *choices):
         self.choices = set(choices)
 

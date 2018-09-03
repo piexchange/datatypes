@@ -1,7 +1,7 @@
 
 from datetime import datetime
 
-from ..Type import Type
+from ..type import Type
 
 
 class Datetime(Type):

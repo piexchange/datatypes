@@ -1,14 +1,14 @@
 
-from ..Type import Type
+from ..type import Type
 from ..types.Boolean import Boolean
 
 
-def parse_value(value, type):
-    if isinstance(type, Type):
-        return type.convert(value)
+def parse(value, type_):
+    if Type in type_.mro():
+        return type_.parse(value)
 
-    if issubclass(type, bool):
-        return Boolean().convert(value)
+    if issubclass(type_, bool):
+        return Boolean.parse(value)
 
-    return type(value)
+    return type_(value)
     # raise TypeError('Unable to convert "{}" to {}'.format(value, type))

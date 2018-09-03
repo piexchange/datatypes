@@ -1,11 +1,11 @@
 
 import re
 
-from ..Type import Type
+from ..type import Type
 
 
 class RegexPattern(Type):
-    _python_type = re._pattern_type
+    python_type = re.Pattern if hasattr(re, 'Pattern') else re._pattern_type
 
     @classmethod
     def parse(cls, value):
@@ -15,4 +15,4 @@ class RegexPattern(Type):
         if isinstance(value, cls.python_type):
             return value
 
-        raise TypeError('Expected a string, got {}'.format(type(value)))
+        raise TypeError('Expected a regex pattern, got {}'.format(type(value).__name__))

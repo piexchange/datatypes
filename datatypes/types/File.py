@@ -1,10 +1,10 @@
 
 import io
 
-from datatypes.Type import Type
+from datatypes.type import Type
 
 
-class File(Type):
+class File(Type, static=True):
     _python_type = io.IOBase
 
     @staticmethod

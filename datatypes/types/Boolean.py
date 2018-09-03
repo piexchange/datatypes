@@ -1,9 +1,9 @@
 
-from datatypes.Type import Type
+from ..type import Type
 
 
 class Boolean(Type):
-    _python_type = bool
+    python_type = bool
 
     @staticmethod
     def parse(value):
@@ -12,9 +12,9 @@ class Boolean(Type):
 
         if isinstance(value, str):
             val = value.lower()
-            if val in {'yes', 'y'}:
+            if val in {'yes', 'y', 'on', 'true'}:
                 return True
-            if val in {'no', 'n'}:
+            if val in {'no', 'n', 'off', 'false'}:
                 return False
         else:
             if value in {1}:
