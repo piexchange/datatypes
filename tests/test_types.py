@@ -3,7 +3,7 @@ from datatypes import *
 
 
 def test_subclasscheck():
-    assert issubclass(bool, Boolean)
+    assert not issubclass(bool, Boolean)
 
 
 def test_subclasscheck_negative():

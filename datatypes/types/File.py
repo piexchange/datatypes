@@ -1,7 +1,7 @@
 
 import io
 
-from datatypes.type import Type
+from .type import Type
 
 
 class File(Type, static=True):

@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from ..type import Type
+from .type import Type
 
 
 class FilePath(Type):

@@ -1,5 +1,5 @@
 
-from ..type import Type
+from .type import Type
 
 
 class Any(Type):

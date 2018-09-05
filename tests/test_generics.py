@@ -1,10 +1,10 @@
 
 import pytest
-from conftest import depends_on
 
 from datatypes import *
 
 
+# COLLECTIONS
 def test_subscripting_generics():
     generic = List
     specific = generic[int]
@@ -17,8 +17,6 @@ def test_subscripting_generics_with_nontypes():
         List[5]
 
 
-@depends_on(test_subscripting_generics)
-# @pytest.mark.depends_on(test_subscripting_generics)
 def test_subscripting_specifics():
     specific = List[int]
 
@@ -44,3 +42,37 @@ def test_generic_conversion():
 
 def test_specific_conversion():
     assert Set[int].parse([1.5, 2.3]) == {1, 2}
+
+
+# OPTIONAL
+def test_specializing_optional():
+    assert issubclass(Optional[int], Optional)
+
+
+def test_generic_optional_instancecheck():
+    assert isinstance(5, Optional)
+
+
+def test_specific_optional_instancecheck():
+    assert isinstance(5, Optional[int])
+
+
+def test_specific_optional_instancecheck_with_none():
+    assert isinstance(None, Optional[int])
+
+
+def test_parse_optional():
+    assert Optional.parse(False) is False
+
+
+def test_parse_specialized_optional():
+    assert Optional[bool].parse(1) is True
+
+
+def test_parse_specialized_optional_with_none():
+    assert Optional[bool].parse(None) is None
+
+
+def test_parse_specialized_optional_with_wrong_type():
+    with pytest.raises(TypeError):
+        Optional[list].parse(5)

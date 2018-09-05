@@ -1,6 +1,5 @@
 
-from ..type import Type
-from ..types.Boolean import Boolean
+from ..types import Type, Boolean
 
 
 def parse(value, type_):

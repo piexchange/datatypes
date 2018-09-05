@@ -1,5 +1,5 @@
 
-from ..type import Type
+from ..types import Type
 
 __all__ = ['Converter']
 

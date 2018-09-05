@@ -1,7 +1,7 @@
 
 import re
 
-from ..type import Type
+from .type import Type
 
 
 class RegexPattern(Type):
