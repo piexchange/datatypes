@@ -2,7 +2,7 @@
 from .Unit import Unit
 
 
-class TimeUnit(metaclass=Unit):
+class TimeUnit(Unit, is_category=True):
     pass
 
 

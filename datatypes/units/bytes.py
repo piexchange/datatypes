@@ -2,7 +2,7 @@
 from .Unit import Unit
 
 
-class ByteUnit(metaclass=Unit):
+class ByteUnit(Unit, is_category=True):
     pass
 
 
