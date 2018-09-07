@@ -1,3 +1,3 @@
 
-from .time import *
-from .bytes import *
+from .duration import *
+from .memory import *

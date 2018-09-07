@@ -1,54 +1,89 @@
 
-from datatypes import units
+import pickle
+
 from datatypes.units import *
 
 
 def test_dynamic_unit_is_only_instantiated_once():
-    a = megabytes / seconds
-    b = megabytes / seconds
+    a = Megabytes / Seconds
+    b = Megabytes / Seconds
     assert a is b
 
 
 def test_dynamic_units_share_category():
-    a = megabytes / seconds
-    b = gigabytes / minutes
+    a = Megabytes / Seconds
+    b = Gigabytes / Minutes
     assert a.category is b.category
 
 
 def test_addition():
-    a = minutes(3)
-    b = minutes(5)
-    assert a + b == minutes(8)
+    a = Minutes(3)
+    b = Minutes(5)
+    assert a + b == Minutes(8)
 
 
 def test_division():
-    a = units.bytes(10)
-    b = minutes(5)
-    assert a / b == (units.bytes/minutes)(2)
+    a = Bytes(10)
+    b = Minutes(5)
+    assert a / b == (Bytes/Minutes)(2)
 
 
 def test_comparison():
-    a = minutes(1)
-    b = seconds(60)
+    a = Minutes(1)
+    b = Seconds(60)
     assert a == b
 
 
 def test_instancecheck_same_class():
-    a = minutes(1)
-    assert isinstance(a, minutes)
+    a = Minutes(1)
+    assert isinstance(a, Minutes)
 
 
 def test_instancecheck_in_same_category():
-    a = minutes(1)
-    assert not isinstance(a, seconds)
+    a = Minutes(1)
+    assert not isinstance(a, Seconds)
 
 
 def test_instancecheck_in_different_category():
-    a = minutes(1)
-    assert not isinstance(a, bytes)
+    a = Minutes(1)
+    assert not isinstance(a, Bytes)
 
 
 def test_unit_conversion():
-    a = minutes(1)
-    b = a.convert_to(seconds)
+    a = Minutes(1)
+    b = a.convert_to(Seconds)
     assert b.value == 60
+
+
+def test_pickling_base_unit():
+    unit = Minutes(3)
+    loaded_unit = pickle.loads(pickle.dumps(unit))
+
+    assert unit == loaded_unit
+
+
+def test_pickling_combined_unit():
+    unit = (Megabytes/Minutes)(7)
+
+    data = pickle.dumps(unit)
+    loaded_unit = pickle.loads(data)
+
+    assert unit == loaded_unit
+
+
+def test_pickling_combined_unit_that_needs_to_be_created():
+    unit = (Megabytes / Weeks)(7)
+
+    data = pickle.dumps(unit)
+    delattr(CombinedUnit, 'Megabytes/Weeks')
+    loaded_unit = pickle.loads(data)
+
+    assert unit == loaded_unit
+
+
+def test_combined_unit_doesnt_pickle_too_much():
+    unit = (Megabytes/Minutes)(7)
+
+    data = pickle.dumps(unit)
+
+    assert len(data) < 150
