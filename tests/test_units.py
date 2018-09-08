@@ -16,6 +16,16 @@ def test_dynamic_units_share_category():
     assert a.category is b.category
 
 
+def test_reordering():
+    a = Bytes * Seconds
+    b = Seconds * Bytes
+    assert a is b
+
+
+def test_simplification():
+    assert Bytes * Seconds / Bytes is Seconds
+
+
 def test_addition():
     a = Minutes(3)
     b = Minutes(5)

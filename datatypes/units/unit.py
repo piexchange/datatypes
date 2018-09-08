@@ -18,9 +18,9 @@ class CategoryMeta(type):
         cls.units = []
 
     # using a category as metaclass will create a UnitMeta instance
-    def __call__(cls, name, bases, attrs):
+    def __call__(cls, name, bases, attrs, unit_id=None):
         bases += (Unit,)
-        unit = UnitMeta(name, bases, attrs)
+        unit = UnitMeta(name, bases, attrs, id_=unit_id)
 
         cls.units.append(unit)
         unit.category = cls
@@ -44,14 +44,134 @@ class CategoryMeta(type):
         return '0{}'.format(cls._default._abbr)
 
 
+class UnitID:
+    def __init__(self, mul, div):
+        assert mul, mul
+
+        self.mul = mul
+        self.div = div
+
+    @classmethod
+    def for_base_unit(cls, unit):
+        mul = {unit: 1}
+        div = {}
+        return cls(mul, div)
+
+    @classmethod
+    def merge(cls, id1, id2, op):
+        mul1, div1 = id1
+        mul2, div2 = id2
+        if op == '/':
+            mul2, div2 = div2, mul2
+
+        mul = {k: mul1.get(k, 0) + mul2.get(k, 0) for k in mul1.keys() | mul2}
+        div = {k: div1.get(k, 0) + div2.get(k, 0) for k in div1.keys() | div2}
+
+        return cls(mul, div)
+
+    def __eq__(self, other):
+        if not isinstance(other, __class__):
+            return NotImplemented
+
+        return self.mul == other.mul and self.div == other.div
+
+    def __hash__(self):
+        return hash(tuple(frozenset(dic.items()) for dic in self))
+
+    def to_category_id(self):
+        dicts = [{k.category: v for k, v in dic.items()} for dic in self]
+        cat_id = type(self)(*dicts)
+        return cat_id.normalized()
+
+    def __iter__(self):
+        yield self.mul
+        yield self.div
+
+    def normalized(self):
+        mul, div = self
+
+        shared_keys = mul.keys() & div
+        shared_units = {key: min(mul[key], div[key]) for key in shared_keys}
+
+        norm_id = []
+        for dic in (mul, div):
+            dic = {unit: count - shared_units.get(unit, 0) for unit, count in dic.items()}
+            dic = {unit: count for unit, count in dic.items() if count > 0}
+
+            norm_id.append(dic)
+
+        return type(self)(*norm_id)
+
+    def _reduce(self, map_func, merge_func):
+        itr = iter(self.mul.items())
+
+        unit, count = next(itr)
+        accu = unit = map_func(unit)
+        for _ in range(count-1):
+            accu = merge_func('*', accu, unit)
+
+        for op, itr in [('*', itr), ('/', self.div.items())]:
+            for unit, count in itr:
+                unit = map_func(unit)
+
+                for _ in range(count):
+                    accu = merge_func(op, accu, unit)
+
+        return accu
+
+    def _attr_from_id(self, attr):
+        map_func = operator.attrgetter(attr)
+
+        def merge_func(op, unit1, unit2):
+            return '{}{}{}'.format(unit1, op, unit2)
+
+        return self._reduce(map_func, merge_func)
+
+    def generate_name(self):
+        return self._attr_from_id('__name__')
+
+    def generate_abbr(self):
+        return self._attr_from_id('_abbr')
+
+    def generate_value(self):
+        map_func = operator.attrgetter('_value')
+
+        def merge_func(op, unit1, unit2):
+            op = {
+                '*': operator.mul,
+                '/': operator.truediv
+            }[op]
+            return op(unit1, unit2)
+
+        return self._reduce(map_func, merge_func)
+
+    def __repr__(self):
+        def prettify_dict(dic):
+            return {unit.__name__: count for unit, count in dic.items()}
+
+        dicts = map(prettify_dict, self)
+
+        return '{}({}, {})'.format(type(self).__name__, *dicts)
+
+
 class UnitMeta(type):
     """
     Metaclass for all Units. This is where multiplication and division of Units is implemented.
     """
-    def __init__(cls, *args, **kwargs):
+
+    _units_by_id = {}
+
+    def __new__(mcs, *args, id_=None, **kwargs):
+        return super().__new__(mcs, *args, **kwargs)
+
+    def __init__(cls, *args, id_=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        cls._id = cls
+        if id_ is None:
+            id_ = UnitID.for_base_unit(cls)
+        cls._id = id_
+
+        cls._units_by_id[id_] = cls
 
         # for pickle support, all Unit subclasses can be accessed as attributes of the CombinedUnit namespace object
         setattr(CombinedUnit, cls.__name__, cls)
@@ -64,97 +184,58 @@ class UnitMeta(type):
 
 
 class CombinedUnitFactory(type):
-    _combined_units = {}
+    # this is only a metaclass because pickle doesn't allow attribute lookup on non-classes.
+    """
+    A factory that creates units of combined types (like bytes per second).
+
+    The single argument accepted by the factory is the combined unit's ID. This ID is
+    a tuple of two dicts:
+
+        ID = (multiply_dict, divide_dict)
+
+    And the two dicts hold unit:quantity pairs. For example, bytes per second would
+    be represented as ({Bytes: 1}, {Seconds: 1}). Similarly, bytes per second squared
+    would be represented as ({Bytes: 1}, {Seconds: 2}).
+
+    The ID is automatically normalized. (In other words, ({A: 2}, {A: 1}) is equivalent to ({A: 1}, {}).)
+    """
+
     _combined_categories = {}
 
     # calling this class returns a Unit instance
-    def __new__(cls, unit_id):
-        unit_id = cls._normalize_id(unit_id)
+    def __new__(mcs, unit_id):
+        unit_id = unit_id.normalized()
         try:
-            return cls._combined_units[unit_id]
+            return UnitMeta._units_by_id[unit_id]
         except KeyError:
             pass
 
         # first, get (or create) the appropriate category for this new unit
-        category_id = cls._get_category_id(unit_id)
+        category_id = unit_id.to_category_id()
         try:
-            category = cls._combined_categories[category_id]
+            category = mcs._combined_categories[category_id]
         except KeyError:
             # create the category for this combined unit
-            name = cls._name_from_id(category_id)
+            name = category_id.generate_name()
             category = CategoryMeta(name, (), {})
-            cls._combined_categories[category_id] = category
+            mcs._combined_categories[category_id] = category
 
         # now that we have the appropriate category, create the new unit
-        name = cls._name_from_id(unit_id)
+        name = unit_id.generate_name()
         bases = ()
         attrs = {
-            '_abbr': cls._abbr_from_id(unit_id),
-            '_value': cls._value_from_id(unit_id)
+            '_abbr': unit_id.generate_abbr(),
+            '_value': unit_id.generate_value(),
         }
-        unit = category(name, bases, attrs)
+        unit = category(name, bases, attrs, unit_id=unit_id)
         unit.__qualname__ = '{}.{}'.format(CombinedUnit.__qualname__, name)
 
-        cls._combined_units[unit_id] = unit
         return unit
 
     @classmethod
-    def merge(cls, unit1, unit2, op):
-        unit_id = (op, unit1, unit2)
-        return cls(unit_id)
-
-    @staticmethod
-    def _normalize_id(unit_id):
-        return unit_id  # TODO
-
-    @classmethod
-    def _get_category_id(cls, unit_id):
-        def categorize(id_):
-            if isinstance(id_, tuple):
-                return (id_[0], *map(categorize, id_[1:]))
-            return id_.category
-
-        category_id = categorize(unit_id)
-        return cls._normalize_id(category_id)
-
-    @classmethod
-    def _reduce_id(cls, unit_id, map_func, merge_func):
-        if isinstance(unit_id, tuple):
-            op, *units = unit_id
-            units = [cls._reduce_id(unit, map_func, merge_func) for unit in units]
-            return functools.reduce(lambda x, y: merge_func(op, x, y), units)
-        else:
-            return map_func(unit_id)
-
-    @classmethod
-    def _attr_from_id(cls, unit_id, attr):
-        map_func = operator.attrgetter(attr)
-
-        def merge_func(op, unit1, unit2):
-            return '{}{}{}'.format(unit1, op, unit2)
-
-        return cls._reduce_id(unit_id, map_func, merge_func)
-
-    @classmethod
-    def _name_from_id(cls, unit_id):
-        return cls._attr_from_id(unit_id, '__name__')
-
-    @classmethod
-    def _abbr_from_id(cls, unit_id):
-        return cls._attr_from_id(unit_id, '_abbr')
-
-    @classmethod
-    def _value_from_id(cls, unit_id):
-        map_func = operator.attrgetter('_value')
-
-        def merge_func(op, unit1, unit2):
-            op = {
-                '*': operator.mul,
-                '/': operator.truediv
-            }[op]
-            return op(unit1, unit2)
-
-        return cls._reduce_id(unit_id, map_func, merge_func)
+    def merge(mcs, unit1, unit2, op):
+        unit_id = UnitID.merge(unit1._id, unit2._id, op)
+        return mcs(unit_id)
 
     def __getattr__(cls, attr):
         # This method exists for pickle support, which looks up classes based on their qualname.
