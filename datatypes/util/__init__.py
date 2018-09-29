@@ -1,3 +1,3 @@
 
-from .Converter import Converter
-from .parse import parse
+from .converter import *
+from .parse import *

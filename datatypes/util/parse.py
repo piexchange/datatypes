@@ -2,6 +2,9 @@
 from ..types import Type, Boolean
 
 
+__all__ = ['parse']
+
+
 def parse(value, type_):
     if issubclass(type_, Type):
         return type_.parse(value)

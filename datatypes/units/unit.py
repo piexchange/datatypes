@@ -29,6 +29,16 @@ class CategoryMeta(type):
             cls._default = unit
 
         return unit
+    
+    def __iter__(cls):
+        return iter(cls.units)
+    
+    def lookup_abbr(cls, abbr):
+        for unit in cls:
+            if unit.abbr == abbr:
+                return unit
+        
+        raise ValueError(abbr)
 
     def format(cls, value):
         chunks = []
@@ -280,6 +290,44 @@ class Unit(metaclass=UnitMeta):
 
     def __init__(self, value):
         self.value = value
+    
+    @classmethod
+    def parse(cls, value):
+        total = cls(0)
+        
+        category = cls.category
+        units_by_abbr = {unit._abbr: unit for unit in category}
+        
+        val = value
+        while val:
+            match = re.match(r'(\d+(?:\.\d+)? ?([^\d\s]+) ?', val)
+            if not match:
+                raise ValueError('Cannot parse string "{}"'.format(value))
+            val = val[match.end():]
+            
+            num = match.group(1)
+            abbr = match.group(2)
+            if '.' in num:
+                num = float(num)
+            else:
+                num = int(num)
+            
+            try:
+                unit = units_by_abbr[abbr]
+            except KeyError:
+                raise ValueError('Cannot parse string "{}": unknown unit "{}"'.format(value, abbr))
+            
+            total += unit(num)
+        
+        return total
+    
+    @classmethod
+    def lookup_abbr(cls, abbr):
+        for unit in cls.__subclasses__():
+            if unit.abbr == abbr:
+                return unit
+        
+        raise ValueError(abbr)
 
     @property
     def category(self):

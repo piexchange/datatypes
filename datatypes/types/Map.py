@@ -2,7 +2,7 @@
 import collections
 
 from .Collection import Collection
-from ..util import Converter
+from ..util import parse
 
 
 class Map(Collection):
@@ -27,7 +27,7 @@ class Map(Collection):
         else:
             raise TypeError('Expected a dict of {} -> {}, got {}'.format(self.key_type, self.value_type, type(value)))
 
-        key_converter = Converter(self.key_type)
-        value_converter = Converter(self.value_type)
-        value = python_type((key_converter.convert(k), value_converter.convert(v)) for k, v in value)
+        key_converter = lambda key: parse(key, self.key_type)
+        value_converter = lambda value: parse(value, self.value_type)
+        value = python_type((key_converter(k), value_converter(v)) for k, v in value)
         return value

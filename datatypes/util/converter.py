@@ -2,6 +2,9 @@
 import inspect
 
 
+__all__ = ['converter']
+
+
 def converter(func):
     """
     Marks a function as the equivalent of the Type.convert method.
