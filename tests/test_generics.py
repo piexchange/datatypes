@@ -24,15 +24,15 @@ def test_subscripting_specifics():
         specific[bool]
 
 
-def test_generic_instancecheck():
+def test_generic_isinstance():
     assert isinstance([1, 2], List)
 
 
-def test_specific_instancecheck():
+def test_specific_isinstance():
     assert isinstance([1, 2], List[int])
 
 
-def test_specific_instancecheck_negative():
+def test_specific_isinstance_negative():
     assert not isinstance([1, 2], List[bool])
 
 
@@ -49,15 +49,15 @@ def test_specializing_optional():
     assert issubclass(Optional[int], Optional)
 
 
-def test_generic_optional_instancecheck():
+def test_generic_optional_isinstance():
     assert isinstance(5, Optional)
 
 
-def test_specific_optional_instancecheck():
+def test_specific_optional_isinstance():
     assert isinstance(5, Optional[int])
 
 
-def test_specific_optional_instancecheck_with_none():
+def test_specific_optional_isinstance_with_none():
     assert isinstance(None, Optional[int])
 
 
