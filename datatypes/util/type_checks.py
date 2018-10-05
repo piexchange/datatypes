@@ -64,12 +64,22 @@ _ORIGIN_TYPE_CHECKERS = {
 
 
 # typing module compatibility functions
+def _is_generic(cls):
+    if cls.__module__ != 'typing':
+        return False
+
+    # in python 3.7, everything has an __args__ tuple, but
+    # if that tuple is empty then it's not a generic
+    type_args = getattr(cls, '__args__', ())
+    return type_args is None or bool(type_args)
+
+
 def _is_base_generic(cls):
-    return bool(getattr(cls, '__parameters__', False))
+    return _is_generic(cls) and bool(cls.__parameters__)
 
 
-def _is_generic_with_arguments(cls):
-    return bool(getattr(cls, '__args__', False))
+def _is_specialized_generic(cls):
+    return _is_generic(cls) and not cls.__parameters__
 
 
 def _get_base_generic(cls):
@@ -77,9 +87,9 @@ def _get_base_generic(cls):
     if hasattr(cls, '_name'):
         base_name = cls._name
         return getattr(typing, base_name)
+    
     # python 3.6 and older
-    else:
-        return cls._gorg
+    return cls.__origin__
 
 
 def _get_python_type(cls):
@@ -97,7 +107,7 @@ def instancecheck(obj, type_):
         python_type = _get_python_type(type_)
         return isinstance(obj, python_type)
 
-    if _is_generic_with_arguments(type_):
+    if _is_specialized_generic(type_):
         python_type = _get_python_type(type_)
         if not isinstance(obj, python_type):
             return False
