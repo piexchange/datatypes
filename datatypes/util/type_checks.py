@@ -65,29 +65,49 @@ _ORIGIN_TYPE_CHECKERS = {
 
 # typing module compatibility functions
 def _is_generic(cls):
+    """
+    Detects any kind of generic, for example `List` or `List[int]`
+    """
+    # check if the class inherits from any `typing` class
     if cls.__module__ != 'typing':
-        return False
+        if not any(c.__module__ == 'typing' for c in cls.mro()):
+            return False
 
-    # in python 3.7, everything has an __args__ tuple, but
-    # if that tuple is empty then it's not a generic
-    type_args = getattr(cls, '__args__', ())
-    return type_args is None or bool(type_args)
+    # only generics have a non-empty __parameters__ tuple
+    params = getattr(cls, '__parameters__', ())
+    if params:
+        return True
+
+    # if the __parameters__ tuple was empty, the only way
+    # this could be a generic is if it has already received
+    # its type arguments
+    return bool(getattr(cls, '__args__', ()))
 
 
 def _is_base_generic(cls):
+    """
+    Detects generic base classes, for example `List` (but not `List[int]`)
+    """
     return _is_generic(cls) and bool(cls.__parameters__)
 
 
 def _is_specialized_generic(cls):
+    """
+    Detects generics with arguments, for example `List[int]` (but not `List`)
+    """
     return _is_generic(cls) and not cls.__parameters__
 
 
 def _get_base_generic(cls):
     # python 3.7
     if hasattr(cls, '_name'):
-        base_name = cls._name
-        return getattr(typing, base_name)
-    
+        # subclasses of Generic will have their _name set to None, but
+        # their __origin__ will point to the base generic
+        if cls._name is None:
+            return cls.__origin__
+        else:
+            return getattr(typing, cls._name)
+
     # python 3.6 and older
     return cls.__origin__
 
