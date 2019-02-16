@@ -1,7 +1,9 @@
 
 import typing
 
-__all__ = ['instancecheck']
+from ..types import Type
+
+__all__ = ['instancecheck', 'python_type']
 
 
 def _typecheck_iterable(iterable, type_args):
@@ -31,36 +33,43 @@ def _typecheck_tuple(tup, type_args):
     return all(instancecheck(val, type_) for val, type_ in zip(tup, type_args))
 
 
-_ORIGIN_TYPE_CHECKERS = {
-    # iterables
-    typing.Container: _typecheck_iterable,
-    typing.Collection: _typecheck_iterable,
-    typing.AbstractSet: _typecheck_iterable,
-    typing.MutableSet: _typecheck_iterable,
-    typing.Sequence: _typecheck_iterable,
-    typing.MutableSequence: _typecheck_iterable,
-    typing.ByteString: _typecheck_iterable,
-    typing.Deque: _typecheck_iterable,
-    typing.List: _typecheck_iterable,
-    typing.Set: _typecheck_iterable,
-    typing.FrozenSet: _typecheck_iterable,
-    typing.KeysView: _typecheck_iterable,
-    typing.ValuesView: _typecheck_iterable,
-    typing.AsyncIterable: _typecheck_iterable,
+_ORIGIN_TYPE_CHECKERS = {}
+for class_path, check_func in {
+                        # iterables
+                        'typing.Container': _typecheck_iterable,
+                        'typing.Collection': _typecheck_iterable,
+                        'typing.AbstractSet': _typecheck_iterable,
+                        'typing.MutableSet': _typecheck_iterable,
+                        'typing.Sequence': _typecheck_iterable,
+                        'typing.MutableSequence': _typecheck_iterable,
+                        'typing.ByteString': _typecheck_iterable,
+                        'typing.Deque': _typecheck_iterable,
+                        'typing.List': _typecheck_iterable,
+                        'typing.Set': _typecheck_iterable,
+                        'typing.FrozenSet': _typecheck_iterable,
+                        'typing.KeysView': _typecheck_iterable,
+                        'typing.ValuesView': _typecheck_iterable,
+                        'typing.AsyncIterable': _typecheck_iterable,
 
-    # mappings
-    typing.Mapping: _typecheck_mapping,
-    typing.MutableMapping: _typecheck_mapping,
-    typing.MappingView: _typecheck_mapping,
-    typing.ItemsView: _typecheck_itemsview,
-    typing.Dict: _typecheck_mapping,
-    typing.DefaultDict: _typecheck_mapping,
-    typing.Counter: _typecheck_mapping,
-    typing.ChainMap: _typecheck_mapping,
+                        # mappings
+                        'typing.Mapping': _typecheck_mapping,
+                        'typing.MutableMapping': _typecheck_mapping,
+                        'typing.MappingView': _typecheck_mapping,
+                        'typing.ItemsView': _typecheck_itemsview,
+                        'typing.Dict': _typecheck_mapping,
+                        'typing.DefaultDict': _typecheck_mapping,
+                        'typing.Counter': _typecheck_mapping,
+                        'typing.ChainMap': _typecheck_mapping,
 
-    # other
-    typing.Tuple: _typecheck_tuple,
-}
+                        # other
+                        'typing.Tuple': _typecheck_tuple,
+                    }.items():
+    try:
+        cls = eval(class_path)
+    except AttributeError:
+        continue
+
+    _ORIGIN_TYPE_CHECKERS[cls] = check_func
 
 
 # typing module compatibility functions
@@ -142,3 +151,18 @@ def instancecheck(obj, type_):
         return validator(obj, type_args)
 
     return isinstance(obj, type_)
+
+
+def python_type(annotation):
+    try:
+        mro = annotation.mro()
+    except AttributeError:
+        # if it doesn't have an mro method, it must be a weird typing object
+        return _get_python_type(annotation)
+
+    if Type in mro:
+        return annotation.python_type
+    elif annotation.__module__ == 'typing':
+        return _get_python_type(annotation)
+    else:
+        return annotation

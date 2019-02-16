@@ -65,6 +65,20 @@ def test_unit_conversion():
     assert b.value == 60
 
 
+def test_unit_str():
+    unit = Megabytes
+    val = unit(13)
+
+    assert str(val) in {'13MB', '13 MB'}
+
+
+def test_combined_unit_str():
+    unit = Megabytes / Minutes
+    val = unit(4)
+
+    assert str(val) in {'4MB/min', '4 MB/min'}
+
+
 def test_pickling_base_unit():
     unit = Minutes(3)
     loaded_unit = pickle.loads(pickle.dumps(unit))

@@ -1,7 +1,18 @@
 
 import functools
+import itertools
 import operator
 import re
+
+"""
+Class hierarchy and relationships:
+
+*) unit categories (e.g. Memory, Duration) are instances of CategoryMeta
+*) unit categories are class factories (metaclasses) that create unit classes
+*) Unit is an instance of UnitMeta
+*) unit classes (e.g. Bytes, Minutes) are subclasses of Unit
+*) unit objects are instances of those classes
+"""
 
 
 class CategoryMeta(type):
@@ -46,12 +57,54 @@ class CategoryMeta(type):
         for unit in cls.units:
             if value >= unit._value:
                 num, value = divmod(value, unit._value)
-                chunks.append('{}{}'.format(num, unit._abbr))
+                chunks.append('{} {}'.format(num, unit._abbr))
 
         if chunks:
             return ' '.join(chunks)
 
-        return '0{}'.format(cls._default._abbr)
+        return '0 {}'.format(cls._default._abbr)
+
+
+class CombinedCategoryMeta(CategoryMeta):
+    def format(cls, value):
+        combinations = None
+
+        for op, cat_dict in [(operator.mul, cls._id.mul), (operator.truediv, cls._id.div)]:
+            for cat, count in cat_dict.items():
+                for _ in range(count):
+                    # if this is the first iteration of the loop, fill the combinations
+                    # with the units in this category
+                    if combinations is None:
+                        combinations = {unit._value: (unit,) for unit in cat.units}
+                        continue
+
+                    # otherwise, create new combinations
+                    combos = {}
+                    for val, units in combinations.items():
+                        for unit in cat.units:
+                            us, v = (units + (unit,), op(val, unit._value))
+                            if not 1 <= v <= value:
+                                continue
+
+                            # if multiple combinations have the same value, prefer
+                            # the one that uses fewer different units
+                            if v in us:
+                                us = min(us, combos[v], key=lambda us: len(set(us)))
+
+                            combos[v] = us
+                    combinations = combos
+
+        val, units = min(combinations.items(), key=lambda pair: value-pair[0])
+
+        itr = iter(units)
+        chunks = [next(itr)._abbr]
+        for _ in range(sum(cls._id.mul.values()) - 1):
+            unit = next(itr)
+            chunks.append('*{}'.format(unit._abbr))
+        for unit in itr:
+            chunks.append('/{}'.format(unit._abbr))
+
+        return '{} {}'.format(str(value / val), ''.join(chunks))
 
 
 class UnitID:
@@ -227,7 +280,10 @@ class CombinedUnitFactory(type):
         except KeyError:
             # create the category for this combined unit
             name = category_id.generate_name()
-            category = CategoryMeta(name, (), {})
+            attrs = {
+                '_id': category_id
+            }
+            category = CombinedCategoryMeta(name, (), attrs)
             mcs._combined_categories[category_id] = category
 
         # now that we have the appropriate category, create the new unit
@@ -399,5 +455,8 @@ class Unit(metaclass=UnitMeta):
 
         return self.value * type(self)._value < other.value * type(other)._value
 
+    def multi_unit_str(self):
+        return self.category.format(self.value * type(self)._value)
+
     def __repr__(self):
-        return self.category.format(self.value)
+        return '{} {}'.format(self.value, type(self)._abbr)
