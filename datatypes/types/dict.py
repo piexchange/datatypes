@@ -1,18 +1,14 @@
 
 import collections
 
-from .Collection import Collection
+from .collection import CollectionMeta
 from ..util import parse
 
+__all__ = ['Dict']
 
-class Map(Collection):
-    _python_type = dict
 
-    def __init__(self, key_type, value_type):
-        super().__init__(key_type)
-
-        self.key_type = key_type
-        self.value_type = value_type
+class Dict(metaclass=CollectionMeta, subtype_names=['key_type', 'value_type']):
+    python_type = dict
 
     def parse(self, value):
         python_type = self.python_type

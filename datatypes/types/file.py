@@ -3,9 +3,11 @@ import io
 
 from .type import Type
 
+__all__ = ['File']
 
-class File(Type, static=True):
-    _python_type = io.IOBase
+
+class File(Type):
+    python_type = io.IOBase
 
     @staticmethod
     def convert(value):

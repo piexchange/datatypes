@@ -1,9 +1,13 @@
 
+import sys
+
 from .type import Type
+
+__all__ = ['String']
 
 
 class String(Type):
-    python_type = str
+    python_type = str if sys.version_info.major >= 3 else unicode
     
     @classmethod
     def parse(cls, value):

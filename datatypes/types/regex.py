@@ -3,6 +3,8 @@ import re
 
 from .type import Type
 
+__all__ = ['RegexPattern']
+
 
 class RegexPattern(Type):
     python_type = re.Pattern if hasattr(re, 'Pattern') else re._pattern_type

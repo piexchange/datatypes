@@ -5,34 +5,50 @@ __all__ = ['GenericMeta', 'Generic']
 
 
 class GenericMeta(TypeMeta):
-    def __new__(mcs, name, bases, attrs, subtype=None):
+    def __new__(mcs, name, bases, attrs, subtype_names):
         return super().__new__(mcs, name, bases, attrs)
 
-    def __init__(cls, name, bases, attrs, subtype=None):
+    def __init__(cls, name, bases, attrs, subtype_names):
         super().__init__(name, bases, attrs)
 
-        if subtype is None:
-            cls._class_for_subtype = {}
-        else:
-            cls.subtype = subtype
+        cls._subtype_names = subtype_names
+        cls._class_for_subtype = {}
 
-    def __getitem__(cls, subtype):
-        if not isinstance(subtype, type):
-            raise TypeError('subtype must be a type, not {}'.format(subtype))
+    def __getitem__(cls, subtypes):
+        if not isinstance(subtypes, tuple):
+            subtypes = (subtypes,)
 
-        if hasattr(cls, 'subtype'):
-            raise TypeError('{} is not a generic class'.format(cls))
+        for subtype in subtypes:
+            if not isinstance(subtype, type):
+                raise TypeError('subtypes must be types, not {}'.format(subtype))
 
-        if subtype not in cls._class_for_subtype:
-            metacls = type(cls)
-            name = '{}[{}]'.format(cls.__name__, subtype.__name__)
-            bases = (cls,)
-            attrs = {}
+        if subtypes in cls._class_for_subtype:
+            return cls._class_for_subtype[subtypes]
 
-            subcls = metacls(name, bases, attrs, subtype=subtype)
-            cls._class_for_subtype[subtype] = subcls
+        metacls = type('Specialized{}Meta'.format(cls.__name__), (SpecializedGenericMeta, type(cls)), {})
+        name = '{}[{}]'.format(cls.__name__, ', '.join(subtype.__name__ for subtype in subtypes))
+        bases = (cls,)
+        attrs = {}
 
-        return cls._class_for_subtype[subtype]
+        subcls = metacls(name, bases, attrs)
+        for subtype, subtype_name in zip(subtypes, cls._subtype_names):
+            setattr(subcls, subtype_name, subtype)
+
+        cls._class_for_subtype[subtypes] = subcls
+        return subcls
+
+
+class SpecializedGenericMeta(GenericMeta):
+    def __new__(mcs, *args, **kwargs):
+        # skip GenericMeta.__new__
+        return super(GenericMeta, mcs).__new__(mcs, *args, **kwargs)
+
+    def __init__(cls, *args, **kwargs):
+        # skip GenericMeta.__init__
+        super(GenericMeta, cls).__init__(*args, **kwargs)
+
+    def __getitem__(cls, subtypes):
+        raise TypeError("{} is not a generic class".format(cls.__name__))
 
 
 # class Generic(Type, metaclass=GenericMeta):

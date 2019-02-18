@@ -1,6 +1,8 @@
 
 from .type import Type
 
+__all__ = ['Any']
+
 
 class Any(Type):
     @staticmethod

@@ -4,6 +4,8 @@ from pathlib import Path
 
 from .type import Type
 
+__all__ = ['FilePath']
+
 
 class FilePath(Type):
     python_type = Path

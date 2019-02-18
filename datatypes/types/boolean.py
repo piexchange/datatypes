@@ -1,6 +1,8 @@
 
 from .type import Type
 
+__all__ = ['Boolean']
+
 
 class Boolean(Type):
     python_type = bool

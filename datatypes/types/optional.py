@@ -3,6 +3,8 @@ from .type import Type
 from .generics import GenericMeta
 from ..util import parse
 
+__all__ = ['Optional']
+
 
 class OptionalMeta(GenericMeta):
     def __instancecheck__(cls, instance):
@@ -12,7 +14,7 @@ class OptionalMeta(GenericMeta):
         return instance is None or isinstance(instance, cls.subtype)
 
 
-class Optional(Type, metaclass=OptionalMeta):
+class Optional(Type, metaclass=OptionalMeta, subtype_names=['subtype']):
     @classmethod
     def parse(cls, value):
         if not hasattr(cls, 'subtype'):

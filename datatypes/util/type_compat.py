@@ -2,11 +2,12 @@
 import typing
 
 from ..types import Type
+from .. import types as dtypes
 
-__all__ = ['is_instance', 'is_subtype', 'python_type']
+__all__ = ['is_instance', 'is_subtype', 'python_type', 'typing_to_datatype']
 
 
-def _typecheck_iterable(iterable, type_args):
+def _instancecheck_iterable(iterable, type_args):
     if len(type_args) != 1:
         raise TypeError("Generic iterables must have exactly 1 type argument; found {}".format(type_args))
 
@@ -14,11 +15,11 @@ def _typecheck_iterable(iterable, type_args):
     return all(is_instance(val, type_) for val in iterable)
 
 
-def _typecheck_mapping(mapping, type_args):
-    return _typecheck_itemsview(mapping.items(), type_args)
+def _instancecheck_mapping(mapping, type_args):
+    return _instancecheck_itemsview(mapping.items(), type_args)
 
 
-def _typecheck_itemsview(itemsview, type_args):
+def _instancecheck_itemsview(itemsview, type_args):
     if len(type_args) != 2:
         raise TypeError("Generic mappings must have exactly 2 type arguments; found {}".format(type_args))
 
@@ -26,7 +27,7 @@ def _typecheck_itemsview(itemsview, type_args):
     return all(is_instance(key, key_type) and is_instance(val, value_type) for key, val in itemsview)
 
 
-def _typecheck_tuple(tup, type_args):
+def _instancecheck_tuple(tup, type_args):
     if len(tup) != len(type_args):
         return False
 
@@ -36,33 +37,33 @@ def _typecheck_tuple(tup, type_args):
 _ORIGIN_TYPE_CHECKERS = {}
 for class_path, check_func in {
                         # iterables
-                        'typing.Container': _typecheck_iterable,
-                        'typing.Collection': _typecheck_iterable,
-                        'typing.AbstractSet': _typecheck_iterable,
-                        'typing.MutableSet': _typecheck_iterable,
-                        'typing.Sequence': _typecheck_iterable,
-                        'typing.MutableSequence': _typecheck_iterable,
-                        'typing.ByteString': _typecheck_iterable,
-                        'typing.Deque': _typecheck_iterable,
-                        'typing.List': _typecheck_iterable,
-                        'typing.Set': _typecheck_iterable,
-                        'typing.FrozenSet': _typecheck_iterable,
-                        'typing.KeysView': _typecheck_iterable,
-                        'typing.ValuesView': _typecheck_iterable,
-                        'typing.AsyncIterable': _typecheck_iterable,
+                        'typing.Container': _instancecheck_iterable,
+                        'typing.Collection': _instancecheck_iterable,
+                        'typing.AbstractSet': _instancecheck_iterable,
+                        'typing.MutableSet': _instancecheck_iterable,
+                        'typing.Sequence': _instancecheck_iterable,
+                        'typing.MutableSequence': _instancecheck_iterable,
+                        'typing.ByteString': _instancecheck_iterable,
+                        'typing.Deque': _instancecheck_iterable,
+                        'typing.List': _instancecheck_iterable,
+                        'typing.Set': _instancecheck_iterable,
+                        'typing.FrozenSet': _instancecheck_iterable,
+                        'typing.KeysView': _instancecheck_iterable,
+                        'typing.ValuesView': _instancecheck_iterable,
+                        'typing.AsyncIterable': _instancecheck_iterable,
 
                         # mappings
-                        'typing.Mapping': _typecheck_mapping,
-                        'typing.MutableMapping': _typecheck_mapping,
-                        'typing.MappingView': _typecheck_mapping,
-                        'typing.ItemsView': _typecheck_itemsview,
-                        'typing.Dict': _typecheck_mapping,
-                        'typing.DefaultDict': _typecheck_mapping,
-                        'typing.Counter': _typecheck_mapping,
-                        'typing.ChainMap': _typecheck_mapping,
+                        'typing.Mapping': _instancecheck_mapping,
+                        'typing.MutableMapping': _instancecheck_mapping,
+                        'typing.MappingView': _instancecheck_mapping,
+                        'typing.ItemsView': _instancecheck_itemsview,
+                        'typing.Dict': _instancecheck_mapping,
+                        'typing.DefaultDict': _instancecheck_mapping,
+                        'typing.Counter': _instancecheck_mapping,
+                        'typing.ChainMap': _instancecheck_mapping,
 
                         # other
-                        'typing.Tuple': _typecheck_tuple,
+                        'typing.Tuple': _instancecheck_tuple,
                     }.items():
     try:
         cls = eval(class_path)
@@ -179,6 +180,19 @@ def is_subtype(cls, type_):
 
 
 def python_type(annotation):
+    """
+    Given a type annotation or a class as input, returns the corresponding python class.
+
+    Examples:
+
+    ::
+        >>> python_type(typing.Dict)
+        <class 'dict'>
+        >>> python_type(typing.List[int])
+        <class 'list'>
+        >>> python_type(int)
+        <class 'int'>
+    """
     try:
         mro = annotation.mro()
     except AttributeError:
@@ -191,3 +205,29 @@ def python_type(annotation):
         return _get_python_type(annotation)
     else:
         return annotation
+
+
+def typing_to_datatype(typing_annotation):
+    """
+    Given a class or object from the typing module as input, returns the corresponding datatypes class. If the input
+    is any other class, it is returned unchanged.
+    """
+    if _is_generic(typing_annotation):
+        python_class = python_type(typing_annotation)
+
+        for cls in vars(dtypes).values():
+            if getattr(cls, 'python_type', None) is python_class:
+                break
+        else:
+            raise NotImplementedError("Sorry, there doesn't seem to be a datatypes equivalent of {}".format(typing_annotation))
+
+        subtypes = _get_subtypes(typing_annotation)
+        if not subtypes:
+            return cls
+
+        subtypes = tuple(typing_to_datatype(subtype) for subtype in subtypes)
+        return cls[subtypes]
+
+    return {
+        typing.Any: dtypes.Any,
+    }.get(typing_annotation, typing_annotation)
