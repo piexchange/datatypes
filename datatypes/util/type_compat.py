@@ -3,7 +3,7 @@ import typing
 
 from ..types import Type
 
-__all__ = ['instancecheck', 'python_type']
+__all__ = ['is_instance', 'is_subtype', 'python_type']
 
 
 def _typecheck_iterable(iterable, type_args):
@@ -11,7 +11,7 @@ def _typecheck_iterable(iterable, type_args):
         raise TypeError("Generic iterables must have exactly 1 type argument; found {}".format(type_args))
 
     type_ = type_args[0]
-    return all(instancecheck(val, type_) for val in iterable)
+    return all(is_instance(val, type_) for val in iterable)
 
 
 def _typecheck_mapping(mapping, type_args):
@@ -23,14 +23,14 @@ def _typecheck_itemsview(itemsview, type_args):
         raise TypeError("Generic mappings must have exactly 2 type arguments; found {}".format(type_args))
 
     key_type, value_type = type_args
-    return all(instancecheck(key, key_type) and instancecheck(val, value_type) for key, val in itemsview)
+    return all(is_instance(key, key_type) and is_instance(val, value_type) for key, val in itemsview)
 
 
 def _typecheck_tuple(tup, type_args):
     if len(tup) != len(type_args):
         return False
 
-    return all(instancecheck(val, type_) for val, type_ in zip(tup, type_args))
+    return all(is_instance(val, type_) for val, type_ in zip(tup, type_args))
 
 
 _ORIGIN_TYPE_CHECKERS = {}
@@ -121,6 +121,10 @@ def _get_base_generic(cls):
     return cls.__origin__
 
 
+def _get_subtypes(cls):
+    return cls.__args__
+
+
 def _get_python_type(cls):
     # python 3.6 and older
     if hasattr(cls, '__extra__'):
@@ -131,7 +135,7 @@ def _get_python_type(cls):
 # end of typing compatibility
 
 
-def instancecheck(obj, type_):
+def is_instance(obj, type_):
     if _is_base_generic(type_):
         python_type = _get_python_type(type_)
         return isinstance(obj, python_type)
@@ -151,6 +155,27 @@ def instancecheck(obj, type_):
         return validator(obj, type_args)
 
     return isinstance(obj, type_)
+
+
+def is_subtype(cls, type_):
+    if _is_base_generic(type_):
+        python_type = _get_python_type(type_)
+        return issubclass(cls, python_type)
+
+    if _is_specialized_generic(type_):
+        container_type = _get_python_type(type_)
+
+        if _is_specialized_generic(cls):
+            container_subtypes = _get_subtypes(type_)
+            subtypes = _get_subtypes(cls)
+
+            type_pairs = zip(subtypes, container_subtypes)
+            if not all(is_subtype(sub, sup) for sub, sup in type_pairs):
+                return False
+
+        return issubclass(cls, container_type)
+
+    return issubclass(cls, type_)
 
 
 def python_type(annotation):
