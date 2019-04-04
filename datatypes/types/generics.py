@@ -1,7 +1,7 @@
 
 from .type import *
 
-__all__ = ['GenericMeta', 'Generic']
+__all__ = ['GenericMeta', 'QualifiedGenericMeta']
 
 
 class GenericMeta(TypeMeta):
@@ -25,7 +25,7 @@ class GenericMeta(TypeMeta):
         if subtypes in cls._class_for_subtype:
             return cls._class_for_subtype[subtypes]
 
-        metacls = type('Specialized{}Meta'.format(cls.__name__), (SpecializedGenericMeta, type(cls)), {})
+        metacls = type('Specialized{}Meta'.format(cls.__name__), (QualifiedGenericMeta, type(cls)), {})
         name = '{}[{}]'.format(cls.__name__, ', '.join(subtype.__name__ for subtype in subtypes))
         bases = (cls,)
         attrs = {}
@@ -38,7 +38,7 @@ class GenericMeta(TypeMeta):
         return subcls
 
 
-class SpecializedGenericMeta(GenericMeta):
+class QualifiedGenericMeta(GenericMeta):
     def __new__(mcs, *args, **kwargs):
         # skip GenericMeta.__new__
         return super(GenericMeta, mcs).__new__(mcs, *args, **kwargs)
@@ -49,6 +49,9 @@ class SpecializedGenericMeta(GenericMeta):
 
     def __getitem__(cls, subtypes):
         raise TypeError("{} is not a generic class".format(cls.__name__))
+
+    def _list_subtypes(cls):
+        return tuple(getattr(cls, attr) for attr in cls._subtype_names)
 
 
 # class Generic(Type, metaclass=GenericMeta):

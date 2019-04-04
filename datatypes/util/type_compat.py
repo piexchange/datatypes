@@ -1,10 +1,13 @@
 
+import inspect
 import typing
 
 from ..types import Type
+from ..types.generics import GenericMeta, QualifiedGenericMeta
 from .. import types as dtypes
 
-__all__ = ['is_instance', 'is_subtype', 'python_type', 'typing_to_datatype']
+__all__ = ['is_instance', 'is_subtype', 'python_type', 'typing_to_datatype', 'is_generic', 'is_base_generic',
+           'is_qualified_generic']
 
 
 def _instancecheck_iterable(iterable, type_args):
@@ -73,42 +76,125 @@ for class_path, check_func in {
     _ORIGIN_TYPE_CHECKERS[cls] = check_func
 
 
-# typing module compatibility functions
-def _is_generic(cls):
-    """
-    Detects any kind of generic, for example `List` or `List[int]`
-    """
-    # check if the class inherits from any `typing` class
-    if cls.__module__ != 'typing':
-        if not any(c.__module__ == 'typing' for c in cls.mro()):
-            return False
+def _instancecheck_callable(value, type_):
+    if not callable(value):
+        return False
 
-    # only generics have a non-empty __parameters__ tuple
-    params = getattr(cls, '__parameters__', ())
-    if params:
+    if is_base_generic(type_):
         return True
 
-    # if the __parameters__ tuple was empty, the only way
-    # this could be a generic is if it has already received
-    # its type arguments
-    return bool(getattr(cls, '__args__', ()))
+    param_types, ret_type = get_subtypes(type_)
+    sig = inspect.signature(value)
+
+    missing_annotations = []
+
+    if param_types is not ...:
+        if len(param_types) != len(sig.parameters):
+            return False
+
+        # FIXME: add support for TypeVars
+
+        # if any of the existing annotations don't match the type, we'll return False.
+        # Then, if any annotations are missing, we'll throw an exception.
+        for param, expected_type in zip(sig.parameters.values(), param_types):
+            param_type = param.annotation
+            if param_type is inspect.Parameter.empty:
+                missing_annotations.append(param)
+                continue
+
+            if not is_subtype(param_type, expected_type):
+                return False
+
+    if sig.return_annotation is inspect.Signature.empty:
+        missing_annotations.append('return')
+    else:
+        if not is_subtype(sig.return_annotation, ret_type):
+            return False
+
+    if missing_annotations:
+        raise ValueError("Missing annotations: {}".format(missing_annotations))
+
+    return True
 
 
-def _is_base_generic(cls):
+def _instancecheck_union(value, type_):
+    types = get_subtypes(type_)
+    return any(is_instance(value, typ) for typ in types)
+
+
+def _instancecheck_type(value, type_):
+    # if it's not a class, return False
+    if not isinstance(value, type):
+        return False
+
+    if is_base_generic(type_):
+        return True
+
+    type_args = get_subtypes(type_)
+    if len(type_args) != 1:
+        raise TypeError("Type must have exactly 1 type argument; found {}".format(type_args))
+
+    return is_subtype(value, type_args[0])
+
+
+_SPECIAL_INSTANCE_CHECKERS = {
+    'Union': _instancecheck_union,
+    'Callable': _instancecheck_callable,
+    'Type': _instancecheck_type,
+    'Any': lambda v, t: True,
+}
+
+
+def is_generic(cls):
+    """
+    Detects any kind of generic, for example `List` or `List[int]`. This includes "special" types like
+    Union and Tuple - anything that's subscriptable, basically.
+    """
+    if isinstance(cls, GenericMeta):
+        return True
+
+    if isinstance(cls, typing._GenericAlias):
+        return True
+
+    if isinstance(cls, typing._SpecialForm):
+        return cls not in {typing.Any}
+
+    return False
+
+
+def is_base_generic(cls):
     """
     Detects generic base classes, for example `List` (but not `List[int]`)
     """
-    return _is_generic(cls) and bool(cls.__parameters__)
+    if isinstance(cls, GenericMeta):
+        return not isinstance(cls, QualifiedGenericMeta)
+
+    if isinstance(cls, typing._GenericAlias):
+        if cls.__origin__ in {typing.Generic, typing._Protocol}:
+            return False
+
+        if isinstance(cls, typing._VariadicGenericAlias):
+            return True
+
+        return len(cls.__parameters__) > 0
+
+    if isinstance(cls, typing._SpecialForm):
+        return cls._name in {'ClassVar', 'Union', 'Optional'}
+
+    return False
 
 
-def _is_specialized_generic(cls):
+def is_qualified_generic(cls):
     """
     Detects generics with arguments, for example `List[int]` (but not `List`)
     """
-    return _is_generic(cls) and not cls.__parameters__
+    return is_generic(cls) and not is_base_generic(cls)
 
 
-def _get_base_generic(cls):
+def get_base_generic(cls):
+    if not is_qualified_generic(cls):
+        raise TypeError('{} is not a qualified Generic and thus has no base'.format(cls))
+
     # python 3.7
     if hasattr(cls, '_name'):
         # subclasses of Generic will have their _name set to None, but
@@ -122,31 +208,56 @@ def _get_base_generic(cls):
     return cls.__origin__
 
 
-def _get_subtypes(cls):
-    return cls.__args__
+def get_subtypes(cls):
+    if isinstance(cls, QualifiedGenericMeta):
+        return cls._list_subtypes()
+
+    subtypes = cls.__args__
+
+    if get_base_generic(cls) is typing.Callable:
+        if len(subtypes) != 2 or subtypes[0] is not ...:
+            subtypes = (subtypes[:-1], subtypes[-1])
+
+    return subtypes
 
 
 def _get_python_type(cls):
+    """
+    Like `python_type`, but only works with `typing` classes.
+    """
     # python 3.6 and older
     if hasattr(cls, '__extra__'):
         return cls.__extra__
     # python 3.7
     else:
         return cls.__origin__
-# end of typing compatibility
 
 
 def is_instance(obj, type_):
-    if _is_base_generic(type_):
+    if type_.__module__ == 'typing':
+        if is_qualified_generic(type_):
+            base_generic = get_base_generic(type_)
+        else:
+            base_generic = type_
+        name = getattr(base_generic, '_name')
+
+        try:
+            validator = _SPECIAL_INSTANCE_CHECKERS[name]
+        except KeyError:
+            pass
+        else:
+            return validator(obj, type_)
+
+    if is_base_generic(type_):
         python_type = _get_python_type(type_)
         return isinstance(obj, python_type)
 
-    if _is_specialized_generic(type_):
+    if is_qualified_generic(type_):
         python_type = _get_python_type(type_)
         if not isinstance(obj, python_type):
             return False
 
-        base = _get_base_generic(type_)
+        base = get_base_generic(type_)
         try:
             validator = _ORIGIN_TYPE_CHECKERS[base]
         except KeyError:
@@ -158,25 +269,32 @@ def is_instance(obj, type_):
     return isinstance(obj, type_)
 
 
-def is_subtype(cls, type_):
-    if _is_base_generic(type_):
-        python_type = _get_python_type(type_)
-        return issubclass(cls, python_type)
+def is_subtype(sub_type, super_type):
+    if not is_generic(sub_type):
+        python_super = python_type(super_type)
+        return issubclass(sub_type, python_super)
 
-    if _is_specialized_generic(type_):
-        container_type = _get_python_type(type_)
+    # at this point we know `sub_type` is a generic
+    python_sub = python_type(sub_type)
+    python_super = python_type(super_type)
+    if not issubclass(python_sub, python_super):
+        return False
 
-        if _is_specialized_generic(cls):
-            container_subtypes = _get_subtypes(type_)
-            subtypes = _get_subtypes(cls)
+    # at this point we know that `sub_type`'s base type is a subtype of `super_type`'s base type.
+    # If `super_type` isn't qualified, then there's nothing more to do.
+    if not is_generic(super_type) or is_base_generic(super_type):
+        return True
 
-            type_pairs = zip(subtypes, container_subtypes)
-            if not all(is_subtype(sub, sup) for sub, sup in type_pairs):
-                return False
+    # at this point we know that `super_type` is a qualified generic... so if `sub_type` isn't
+    # qualified, it can't be a subtype.
+    if is_base_generic(sub_type):
+        return False
 
-        return issubclass(cls, container_type)
-
-    return issubclass(cls, type_)
+    # at this point we know that both types are qualified generics, so we just have to
+    # compare their sub-types.
+    sub_args = get_subtypes(sub_type)
+    super_args = get_subtypes(super_type)
+    return all(is_subtype(sub_arg, super_arg) for sub_arg, super_arg in zip(sub_args, super_args))
 
 
 def python_type(annotation):
@@ -212,7 +330,7 @@ def typing_to_datatype(typing_annotation):
     Given a class or object from the typing module as input, returns the corresponding datatypes class. If the input
     is any other class, it is returned unchanged.
     """
-    if _is_generic(typing_annotation):
+    if is_generic(typing_annotation):
         python_class = python_type(typing_annotation)
 
         for cls in vars(dtypes).values():
@@ -221,10 +339,10 @@ def typing_to_datatype(typing_annotation):
         else:
             raise NotImplementedError("Sorry, there doesn't seem to be a datatypes equivalent of {}".format(typing_annotation))
 
-        subtypes = _get_subtypes(typing_annotation)
-        if not subtypes:
+        if is_base_generic(typing_annotation):
             return cls
 
+        subtypes = get_subtypes(typing_annotation)
         subtypes = tuple(typing_to_datatype(subtype) for subtype in subtypes)
         return cls[subtypes]
 

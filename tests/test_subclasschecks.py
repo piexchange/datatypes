@@ -13,11 +13,11 @@ def test_typing_type():
 
 
 def test_generic_iterable():
-    assert is_subtype(list, List[int])
+    assert is_subtype(List[int], list)
 
 
 def test_generic_mapping():
-    assert is_subtype(dict, Dict[int, str])
+    assert is_subtype(Dict[int, str], dict)
 
 
 def test_mismatched_generic_mapping():
@@ -25,8 +25,8 @@ def test_mismatched_generic_mapping():
 
 
 def test_tuple():
-    assert is_subtype(tuple, Tuple[str, bool])
+    assert is_subtype(Tuple[str, bool], tuple)
 
 
 def test_nested_generics():
-    assert is_subtype(Tuple[list], Tuple[List[float], str])
+    assert is_subtype(Tuple[List[float]], Tuple[list])
