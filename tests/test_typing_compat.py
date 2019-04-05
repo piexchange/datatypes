@@ -66,5 +66,5 @@ def test_is_base_generic(type_, expected):
     (typing.Callable[[], int], True),
     (typing.Optional[int], True),
 ])
-def test_is_specialized_generic(type_, expected):
+def test_is_qualified_generic(type_, expected):
     assert is_qualified_generic(type_) == expected
