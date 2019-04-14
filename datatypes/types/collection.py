@@ -28,6 +28,8 @@ class CollectionMeta(GenericMeta):
 
 
 class Collection(Type, metaclass=CollectionMeta):
+    python_type = collections.abc.Collection
+
     @classmethod
     def parse(cls, value):
         if isinstance(value, (str, bytes)):

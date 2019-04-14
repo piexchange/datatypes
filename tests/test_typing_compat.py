@@ -4,7 +4,8 @@ import pytest
 import typing
 
 import datatypes
-from datatypes import typing_to_datatype, is_generic, is_base_generic, is_qualified_generic
+from datatypes.introspection import is_generic, is_base_generic, is_qualified_generic
+from datatypes.util import typing_to_datatype
 
 
 @pytest.mark.parametrize(['typing_annotation', 'datatype'], [

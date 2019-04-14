@@ -1,5 +1,4 @@
 
 from .types import *
-
-from .util import *
+from .type_checks import *
 
