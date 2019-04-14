@@ -519,7 +519,7 @@ def typing_to_datatype(typing_annotation):
     is any other class, it is returned unchanged.
     """
     if is_generic(typing_annotation):
-        python_class = python_type(typing_annotation)
+        python_class = get_python_type(typing_annotation)
 
         for cls in vars(dtypes).values():
             if getattr(cls, 'python_type', None) is python_class:
