@@ -66,6 +66,15 @@ def test_union(value, type_, expected):
     assert is_instance(value, type_) == expected
 
 
+@pytest.mark.parametrize('value, type_, expected', [
+    (3.5, SupportsInt, True),
+    ('foo', Hashable, True),
+    ([], Sized, True),
+])
+def test_supportsX(value, type_, expected):
+    assert is_instance(value, type_) == expected
+
+
 def int_str__float(i: int, s: str) -> float:
     pass
 
@@ -110,16 +119,27 @@ def t__t(x: T) -> T:
 def t_t__t(x: T, y: T) -> T:
     pass
 
-# @pytest.mark.parametrize('value, type_, expected', [
-#     (t__t, Callable, True),
-#     (t__t, Callable[[int], int], True),
-#     (t__t, Callable[[int], bool], True),
-#     (t__t, Callable[[bool], int], True),
-#     (t__t, Callable[[int], float], False),
-#     (t_t__t, Callable[[int, int], int], True),
-#     (t_t__t, Callable[[int, bool], bool], True),
-#     (t_t__t, Callable[[bool, bool], int], True),
-#     (t_t__t, Callable[[int, bool], float], False),
-# ])
-# def test_callable_with_typevars(value, type_, expected):
-#     assert is_instance(value, type_) == expected
+def bool_int__str(x: bool, y: int) -> str:
+    pass
+
+def bool_str__int(x: bool, y: str) -> int:
+    pass
+
+IntVar = TypeVar('IntVar')
+
+@pytest.mark.parametrize('value, type_, expected', [
+    (t__t, Callable, True),
+    (t__t, Callable[[int], int], True),
+    (t__t, Callable[[int], bool], True),
+    (t__t, Callable[[bool], int], True),
+    (t__t, Callable[[int], float], False),
+    (t_t__t, Callable[[int, int], int], True),
+    (t_t__t, Callable[[int, bool], bool], True),
+    (t_t__t, Callable[[bool, bool], int], True),
+    (t_t__t, Callable[[int, bool], float], False),
+    (bool_int__str, Callable[[IntVar, IntVar], str], True),
+    (bool_str__int, Callable[[IntVar, str], IntVar], True),
+])
+def test_callable_with_typevars(value, type_, expected):
+    assert is_instance(value, type_) == expected
+

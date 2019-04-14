@@ -7,7 +7,7 @@ from ..types.generics import GenericMeta, QualifiedGenericMeta
 from .. import types as dtypes
 
 __all__ = ['is_instance', 'is_subtype', 'python_type', 'typing_to_datatype', 'is_generic', 'is_base_generic',
-           'is_qualified_generic']
+           'is_qualified_generic', 'get_base_generic']
 
 
 if hasattr(typing, '_GenericAlias'):
@@ -55,7 +55,10 @@ if hasattr(typing, '_GenericAlias'):
 
 
     def _get_name(cls):
-        return cls._name
+        try:
+            return cls._name
+        except AttributeError:
+            return cls.__name__
 else:
     # python <3.7
     if hasattr(typing, '_Union'):
@@ -114,7 +117,10 @@ else:
             raise NotImplementedError("Cannot determine base of {}".format(cls))
 
         name = name[:-4]
-        return getattr(typing, name)
+        try:
+            return getattr(typing, name)
+        except AttributeError:
+            raise NotImplementedError("Cannot determine base of {}".format(cls))
 
 
     def _get_python_type(cls):
@@ -181,6 +187,10 @@ else:
         return subtypes
 
 
+def _is_protocol(cls):
+    return isinstance(cls, typing._ProtocolMeta)
+
+
 def is_generic(cls):
     """
     Detects any kind of generic, for example `List` or `List[int]`. This includes "special" types like
@@ -212,6 +222,9 @@ def is_qualified_generic(cls):
 def get_base_generic(cls):
     if not is_qualified_generic(cls):
         raise TypeError('{} is not a qualified Generic and thus has no base'.format(cls))
+
+    if isinstance(cls, GenericMeta):
+        return cls._base
 
     return _get_base_generic(cls)
 
@@ -305,8 +318,6 @@ def _instancecheck_callable(value, type_):
         if len(param_types) != len(sig.parameters):
             return False
 
-        # FIXME: add support for TypeVars
-
         # if any of the existing annotations don't match the type, we'll return False.
         # Then, if any annotations are missing, we'll throw an exception.
         for param, expected_type in zip(sig.parameters.values(), param_types):
@@ -314,6 +325,10 @@ def _instancecheck_callable(value, type_):
             if param_type is inspect.Parameter.empty:
                 missing_annotations.append(param)
                 continue
+
+            # FIXME: add support for TypeVars
+            if isinstance(expected_type, typing.TypeVar) or isinstance(param_type, typing.TypeVar):
+                raise NotImplementedError('TypeVars are not supported')
 
             if not is_subtype(param_type, expected_type):
                 return False
@@ -350,6 +365,51 @@ def _instancecheck_type(value, type_):
     return is_subtype(value, type_args[0])
 
 
+def _instancecheck_protocol(value, proto):
+    def is_abstract(thing):
+        return getattr(thing, '__isabstractmethod__', False)
+
+    def extract_inner_methods(thing):
+        if isinstance(thing, property):
+            return {
+                'property.fget': thing.fget,
+                'property.fset': thing.fset,
+                'property.fdel': thing.fdel
+            }
+
+        if isinstance(thing, classmethod):
+            return {'classmethod.__func__': thing.__func__}
+
+        if isinstance(thing, staticmethod):
+            return {'staticmethod.__func__': thing.__func__}
+
+        return {'': thing}
+
+    abcs = {}
+    seen = set()
+    for cls in proto.mro():
+        for name, val in vars(cls).items():
+            if name in seen:
+                continue
+            seen.add(name)
+
+            abstracts = {k for k, meth in extract_inner_methods(val).items() if is_abstract(meth)}
+            if abstracts:
+                abcs[name] = abstracts
+
+    for name, abstracts in abcs.items():
+        try:
+            meth = getattr(value, name)
+        except AttributeError:
+            return False
+
+        abcs = {k for k, m in extract_inner_methods(meth).items() if is_abstract(m)}
+        if abstracts & abcs:
+            return False
+
+    return True
+
+
 _SPECIAL_INSTANCE_CHECKERS = {
     'Union': _instancecheck_union,
     'Callable': _instancecheck_callable,
@@ -360,6 +420,9 @@ _SPECIAL_INSTANCE_CHECKERS = {
 
 def is_instance(obj, type_):
     if type_.__module__ == 'typing':
+        if _is_protocol(type_):
+            return _instancecheck_protocol(obj, type_)
+
         if is_qualified_generic(type_):
             base_generic = get_base_generic(type_)
         else:
