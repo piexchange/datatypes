@@ -10,8 +10,9 @@ __all__ = ['Dict']
 class Dict(metaclass=CollectionMeta, subtype_names=['key_type', 'value_type']):
     python_type = dict
 
-    def parse(self, value):
-        python_type = self.python_type
+    @classmethod
+    def parse(cls, value):
+        python_type = cls.python_type
 
         if isinstance(value, python_type):
             value = value.items()
@@ -23,7 +24,7 @@ class Dict(metaclass=CollectionMeta, subtype_names=['key_type', 'value_type']):
         else:
             raise TypeError('Expected a dict of {} -> {}, got {}'.format(self.key_type, self.value_type, type(value)))
 
-        key_converter = lambda key: parse(key, self.key_type)
-        value_converter = lambda value: parse(value, self.value_type)
+        key_converter = lambda key: parse(key, cls.key_type)
+        value_converter = lambda value: parse(value, cls.value_type)
         value = python_type((key_converter(k), value_converter(v)) for k, v in value)
         return value
