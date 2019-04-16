@@ -3,7 +3,7 @@ import collections.abc
 
 from .type import Type
 from .generics import GenericMeta
-from ..util import parse
+from ..parse import parse
 
 __all__ = ['Collection']
 

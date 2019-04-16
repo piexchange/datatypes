@@ -2,7 +2,7 @@
 import collections
 
 from .collection import CollectionMeta
-from ..util import parse
+from ..parse import parse
 
 __all__ = ['Dict']
 

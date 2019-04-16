@@ -1,5 +1,5 @@
 
-from ..types import Type, Boolean
+from .types import Type, Boolean
 from .type_compat import typing_to_datatype
 
 
