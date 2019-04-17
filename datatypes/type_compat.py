@@ -2,34 +2,38 @@
 import typing
 
 from datatypes import types as dtypes
-from datatypes.introspection import is_generic, is_base_generic, get_python_type, get_subtypes
+from datatypes.introspection import is_generic, is_base_generic, get_base_generic, get_python_type, get_subtypes
 
 
-__all__ = ['typing_to_datatype']
+__all__ = ['class_to_datatype']
 
 
+_CLASS_TO_DTYPE = {dtype.python_type: dtype for dtype in vars(dtypes).values() if hasattr(dtype, 'python_type')}
+_TYPING_TO_DTYPE = {dtype.typing_type: dtype for dtype in vars(dtypes).values() if hasattr(dtype, 'typing_type')}
 
-def typing_to_datatype(typing_annotation):
+
+def class_to_datatype(cls):
     """
-    Given a class or object from the typing module as input, returns the corresponding datatypes class. If the input
-    is any other class, it is returned unchanged.
+    Given a class or type annotation as input, returns the corresponding datatypes class. If no equivalent
+    datatype exists, the input is returned unchanged.
     """
-    if is_generic(typing_annotation):
-        python_class = get_python_type(typing_annotation)
+    if cls.__module__ not in {'typing', 'datatypes'}:
+        return _CLASS_TO_DTYPE.get(cls, cls)
 
-        for cls in vars(dtypes).values():
-            if getattr(cls, 'python_type', None) is python_class:
-                break
-        else:
-            raise NotImplementedError("Sorry, there doesn't seem to be a datatypes equivalent of {}".format(typing_annotation))
+    if not is_generic(cls) or is_base_generic(cls):
+        if cls.__module__ == 'typing':
+            return _TYPING_TO_DTYPE.get(cls, cls)
 
-        if is_base_generic(typing_annotation):
-            return cls
+        return _CLASS_TO_DTYPE.get(cls, cls)
 
-        subtypes = get_subtypes(typing_annotation)
-        subtypes = tuple(typing_to_datatype(subtype) for subtype in subtypes)
-        return cls[subtypes]
+    # at this point we know the class is a qualified generic
+    base = get_base_generic(cls)
+    base = class_to_datatype(base)
 
-    return {
-        typing.Any: dtypes.Any,
-    }.get(typing_annotation, typing_annotation)
+    subtypes = get_subtypes(cls)
+    subtypes = tuple(class_to_datatype(subtype) for subtype in subtypes)
+    if len(subtypes) == 1:
+        return base[subtypes[0]]
+    return base[subtypes]
+
+

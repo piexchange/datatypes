@@ -28,7 +28,12 @@ class GenericMeta(TypeMeta):
         metacls = type('Specialized{}Meta'.format(cls.__name__), (QualifiedGenericMeta, type(cls)), {})
         name = '{}[{}]'.format(cls.__name__, ', '.join(subtype.__name__ for subtype in subtypes))
         bases = (cls,)
-        attrs = {'_base': cls}
+        attrs = {
+            '_base': cls,
+        }
+        for attr in ('python_type','typing_type'):
+            if hasattr(cls, attr):
+                attrs[attr] = getattr(cls, attr)
 
         subcls = metacls(name, bases, attrs)
         for subtype, subtype_name in zip(subtypes, cls._subtype_names):

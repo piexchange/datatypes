@@ -12,6 +12,20 @@ class TypeMeta(type):
     def __instancecheck__(cls, instance):
         return isinstance(instance, cls.python_type)
 
+    @property
+    def python_type(cls):
+        try:
+            return vars(cls)['python_type']
+        except KeyError:
+            raise AttributeError('{} has no equivalent python type'.format(cls.__qualname__)) from None
+
+    @property
+    def typing_type(cls):
+        try:
+            return vars(cls)['typing_type']
+        except KeyError:
+            raise AttributeError('{} has no equivalent typing type'.format(cls.__qualname__)) from None
+
 
 class Type(metaclass=TypeMeta):
     def __new__(cls, *args, **kwargs):

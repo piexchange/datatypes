@@ -4,19 +4,21 @@ import pytest
 import typing
 
 import datatypes
-from datatypes import is_generic, is_base_generic, is_qualified_generic, typing_to_datatype
+from datatypes import is_generic, is_base_generic, is_qualified_generic, class_to_datatype
 
 
-@pytest.mark.parametrize(['typing_annotation', 'datatype'], [
-    [int, int],
-    [str, str],
-    [typing.List, datatypes.List],
-    [typing.List[int], datatypes.List[int]],
-    [typing.List[typing.Dict], datatypes.List[datatypes.Dict]],
-    [typing.List[typing.Dict[int, str]], datatypes.List[datatypes.Dict[int, str]]],
+@pytest.mark.parametrize(['cls', 'dtype'], [
+    (bytearray, bytearray),
+    (int, datatypes.Integer),
+    (typing.Text, datatypes.Text),
+    (typing.List, datatypes.List),
+    (typing.Dict, datatypes.Dict),
+    (typing.List[bytearray], datatypes.List[bytearray]),
+    (typing.List[typing.Dict], datatypes.List[datatypes.Dict]),
+    (typing.List[typing.Dict[bytearray, memoryview]], datatypes.List[datatypes.Dict[bytearray, memoryview]]),
 ])
-def test_typing_to_datatype(typing_annotation, datatype):
-    assert typing_to_datatype(typing_annotation) == datatype
+def test_class_to_datatype(cls, dtype):
+    assert class_to_datatype(cls) == dtype
 
 
 @pytest.mark.parametrize(['type_', 'expected'], [

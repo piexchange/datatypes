@@ -13,7 +13,7 @@ from .numbers import *
 from .optional import *
 from .regex import *
 from .set import *
-from .string import *
+from .text import *
 
 # because some of the submodules have names that conflict with builtins, we REALLY have to make sure
 # a `from datatypes import *` doesn't import those...

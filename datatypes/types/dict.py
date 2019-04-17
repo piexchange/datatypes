@@ -1,5 +1,6 @@
 
 import collections
+import typing
 
 from .collection import CollectionMeta
 from ..parse import parse
@@ -9,6 +10,7 @@ __all__ = ['Dict']
 
 class Dict(metaclass=CollectionMeta, subtype_names=['key_type', 'value_type']):
     python_type = dict
+    typing_type = typing.Dict
 
     @classmethod
     def parse(cls, value):

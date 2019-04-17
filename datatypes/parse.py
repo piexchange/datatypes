@@ -1,19 +1,17 @@
 
-from .types import Type, Boolean
-from .type_compat import typing_to_datatype
+from .types import Type
 
 
 __all__ = ['parse']
 
 
 def parse(value, type_):
-    type_ = typing_to_datatype(type_)
+    from .type_compat import class_to_datatype  # this import has to be here to avoid cyclic imports at import time
+
+    type_ = class_to_datatype(type_)
 
     if issubclass(type_, Type):
         return type_.parse(value)
-
-    if issubclass(type_, bool):
-        return Boolean.parse(value)
 
     return type_(value)
     # raise TypeError('Unable to convert "{}" to {}'.format(value, type))

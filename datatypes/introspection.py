@@ -256,7 +256,10 @@ def get_python_type(annotation):
         return _get_python_type(annotation)
 
     if Type in mro:
-        return annotation.python_type
+        try:
+            return annotation.python_type
+        except AttributeError:
+            raise ValueError("There is no python equivalent of {}".format(annotation))
     elif annotation.__module__ == 'typing':
         return _get_python_type(annotation)
     else:
