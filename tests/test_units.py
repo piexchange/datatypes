@@ -38,6 +38,16 @@ def test_division():
     assert a / b == (Bytes/Minutes)(2)
 
 
+def test_int_multiplication():
+    a = Bytes(10)
+    assert a * 5 == Bytes(50)
+
+
+def test_int_multiplication_right():
+    a = Bytes(10)
+    assert 5 * a == Bytes(50)
+
+
 def test_comparison():
     a = Minutes(1)
     b = Seconds(60)

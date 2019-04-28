@@ -1,10 +1,15 @@
 
 from .type import Type
 
-__all__ = ['Integer', 'NaturalNumber']
+
+__all__ = ['Number', 'Integer', 'NaturalNumber']
 
 
-class Integer(Type):
+class Number(Type):
+    pass
+
+
+class Integer(Number):
     python_type = int
 
     @classmethod

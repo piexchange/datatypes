@@ -410,6 +410,9 @@ class Unit(metaclass=UnitMeta):
     def __sub__(self, other):
         return self._addsub(other, operator.sub, 'subtract')
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def _addsub(self, other, op, opname):
         if not isinstance(other, __class__):
             return NotImplemented
@@ -420,16 +423,20 @@ class Unit(metaclass=UnitMeta):
         value = op(self.value, other.value)
         return type(self)(value)
 
-    def __radd__(self, other):
-        return self.__add__(other)
-
     def __mul__(self, other):
         return self._muldiv(other, operator.mul, 'multiply')
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def __truediv__(self, other):
         return self._muldiv(other, operator.truediv, 'divide')
 
     def _muldiv(self, other, op, opname):
+        if isinstance(other, (int, float)):
+            value = op(self.value, other)
+            return type(self)(value)
+
         if not isinstance(other, __class__):
             return NotImplemented
 
