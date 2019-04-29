@@ -470,5 +470,11 @@ class Unit(metaclass=UnitMeta):
     def multi_unit_str(self):
         return self.category.format(self.value * type(self)._value)
 
+    def __int__(self):
+        return int(self.value * type(self)._value)
+
+    def __float__(self):
+        return float(self.value * type(self)._value)
+
     def __repr__(self):
         return '{} {}'.format(self.value, type(self)._abbr)

@@ -54,6 +54,11 @@ def test_comparison():
     assert a == b
 
 
+def test_int():
+    a = Mebibytes(3)
+    assert int(a) == 1024**2 * 3
+
+
 def test_instancecheck_same_class():
     a = Minutes(1)
     assert isinstance(a, Minutes)
