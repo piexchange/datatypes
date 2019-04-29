@@ -27,9 +27,9 @@ def test_simplification():
 
 
 def test_addition():
-    a = Minutes(3)
-    b = Minutes(5)
-    assert a + b == Minutes(8)
+    a = Seconds(3)
+    b = Minutes(2)
+    assert a + b == Seconds(123)
 
 
 def test_division():
@@ -87,6 +87,13 @@ def test_combined_unit_str():
     val = unit(4)
 
     assert str(val) in {'4MB/min', '4 MB/min'}
+
+
+def test_parse():
+    text = '5 MB'
+    val = Kilobytes.parse(text)
+
+    assert val == Kilobytes(5000)
 
 
 def test_pickling_base_unit():

@@ -51,6 +51,10 @@ class CategoryMeta(type):
         
         raise ValueError(abbr)
 
+    def parse(cls, value):
+        unit = cls._default
+        return unit.parse(value)
+
     def format(cls, value):
         chunks = []
 
@@ -356,7 +360,7 @@ class Unit(metaclass=UnitMeta):
         
         val = value
         while val:
-            match = re.match(r'(\d+(?:\.\d+)? ?([^\d\s]+) ?', val)
+            match = re.match(r'(\d+(?:\.\d+)?) ?([^\d\s]+) ?', val)
             if not match:
                 raise ValueError('Cannot parse string "{}"'.format(value))
             val = val[match.end():]
@@ -367,14 +371,14 @@ class Unit(metaclass=UnitMeta):
                 num = float(num)
             else:
                 num = int(num)
-            
+
             try:
                 unit = units_by_abbr[abbr]
             except KeyError:
                 raise ValueError('Cannot parse string "{}": unknown unit "{}"'.format(value, abbr))
-            
+
             total += unit(num)
-        
+
         return total
     
     @classmethod
@@ -420,7 +424,8 @@ class Unit(metaclass=UnitMeta):
         if self.category != other.category:
             raise TypeError('Cannot {} {} and {}'.format(opname, type(self), type(other)))
 
-        value = op(self.value, other.value)
+        other_val = other.value * other._value / self._value
+        value = op(self.value, other_val)
         return type(self)(value)
 
     def __mul__(self, other):
