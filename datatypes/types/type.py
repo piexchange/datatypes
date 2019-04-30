@@ -33,11 +33,15 @@ class Type(metaclass=TypeMeta):
 
     @classmethod
     def is_a(cls, type_):
-        return issubclass(cls, type_)
+        from ..type_checks import is_subtype
+
+        return is_subtype(cls, type_)
 
     @classmethod
     def parse(cls, value):
-        if isinstance(value, cls):
+        from ..type_checks import is_instance
+
+        if is_instance(value, cls):
             return value
 
         raise TypeError('Expected a {}, got a {}'.format(cls.python_type.__name__, type(value).__name__))
