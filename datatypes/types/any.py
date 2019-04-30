@@ -1,12 +1,17 @@
 
 import typing
 
-from .type import Type
+from .type import Type, TypeMeta
 
 __all__ = ['Any']
 
 
-class Any(Type):
+class AnyMeta(TypeMeta):
+    def __instancecheck__(cls, instance):
+        return True
+
+
+class Any(Type, metaclass=AnyMeta):
     typing_type = typing.Any
 
     @staticmethod
