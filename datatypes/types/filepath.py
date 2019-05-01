@@ -14,7 +14,7 @@ class FilePath(Type):
     def parse(cls, value):
         if isinstance(value, cls.python_type):
             return value
-        elif isinstance(value, (str, os.Pathlike)):
+        elif isinstance(value, (str, os.PathLike)):
             return Path(value)
 
         raise TypeError('Expected a file path, got {}'.format(type(value)))

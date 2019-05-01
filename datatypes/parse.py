@@ -10,6 +10,7 @@ def parse(value, type_):
 
     type_ = class_to_datatype(type_)
 
+    print(type_, isinstance(type_, type), issubclass(type_, Type))
     if isinstance(type_, type) and issubclass(type_, Type):
         return type_.parse(value)
 

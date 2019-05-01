@@ -1,6 +1,4 @@
 
-import typing
-
 from datatypes import types as dtypes
 from datatypes.introspection import is_generic, is_base_generic, get_base_generic, get_python_type, get_subtypes
 
