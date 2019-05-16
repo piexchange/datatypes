@@ -29,7 +29,7 @@ if hasattr(typing, '_GenericAlias'):
             if isinstance(cls, typing._VariadicGenericAlias):
                 return True
 
-            return len(cls.__parameters__) > 0
+            return cls._special
 
         if isinstance(cls, typing._SpecialForm):
             return cls._name in {'ClassVar', 'Union', 'Optional'}
