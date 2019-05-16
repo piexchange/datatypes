@@ -143,3 +143,27 @@ IntVar = TypeVar('IntVar')
 def test_callable_with_typevars(value, type_, expected):
     assert is_instance(value, type_) == expected
 
+
+@pytest.mark.parametrize('value,constraints,expected', [
+    (2, (int, str), True),
+    ('x', (int, str), True),
+    (3j, (int, str), False),
+    (False, (int, str), True),
+    (IndexError(7), (Exception, bool), True),
+])
+def test_typevar(value, constraints, expected):
+    var = TypeVar('T', *constraints)
+
+    assert is_instance(value, var) == expected
+
+
+@pytest.mark.parametrize('value,bound,expected', [
+    (2, str, False),
+    (3, int, False),
+    (True, int, True),
+    (IndexError(7), Exception, True),
+])
+def test_bounded_typevar(value, bound, expected):
+    var = TypeVar('T', bound=bound)
+
+    assert is_instance(value, var) == expected

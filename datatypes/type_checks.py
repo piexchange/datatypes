@@ -184,6 +184,14 @@ def _instancecheck_protocol(value, proto):
     return True
 
 
+def _instancecheck_typevar(obj, typevar):
+    bound = typevar.__bound__
+    if bound is not None:
+        return isinstance(obj, bound) and type(obj) is not bound
+
+    return isinstance(obj, typevar.__constraints__)
+
+
 _SPECIAL_INSTANCE_CHECKERS = {
     'Union': _instancecheck_union,
     'Callable': _instancecheck_callable,
@@ -227,6 +235,9 @@ def is_instance(obj, type_):
 
         type_args = get_subtypes(type_)
         return validator(obj, type_args)
+
+    if isinstance(type_, typing.TypeVar):
+        return _instancecheck_typevar(obj, type_)
 
     return isinstance(obj, type_)
 

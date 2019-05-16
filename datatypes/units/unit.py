@@ -349,6 +349,9 @@ class Unit(metaclass=UnitMeta):
     """
 
     def __init__(self, value):
+        if not isinstance(value, (int, float)):
+            raise TypeError('unit value must be an int or float, not {}'.format(type(value)))
+
         self.value = value
     
     @classmethod
