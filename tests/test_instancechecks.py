@@ -75,6 +75,19 @@ def test_supportsX(value, type_, expected):
     assert is_instance(value, type_) == expected
 
 
+@pytest.mark.parametrize('value, type_, expected', [
+    ([], Iterable, True),
+    ([], Iterable[str], True),
+    ([1], Iterable[str], False),
+    ({1: 2}, Iterable[int], True),
+    (iter({1: 2}), Iterable[int], True),
+    ({1: 2}.keys(), Iterable[int], True),
+    ({1: 2}.values(), Iterable[int], True),
+])
+def test_iterable(value, type_, expected):
+    assert is_instance(value, type_) == expected
+
+
 def int_str__float(i: int, s: str) -> float:
     pass
 
