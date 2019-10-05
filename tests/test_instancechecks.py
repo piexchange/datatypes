@@ -152,6 +152,7 @@ IntVar = TypeVar('IntVar')
     (t_t__t, Callable[[int, bool], float], False),
     (bool_int__str, Callable[[IntVar, IntVar], str], True),
     (bool_str__int, Callable[[IntVar, str], IntVar], True),
+    (bool, Callable[[], bool], True),
 ])
 def test_callable_with_typevars(value, type_, expected):
     assert is_instance(value, type_) == expected

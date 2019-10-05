@@ -1,5 +1,6 @@
 
-import inspect
+import introspection
+
 import typing
 
 from datatypes.types.generics import GenericMeta, QualifiedGenericMeta
@@ -53,6 +54,7 @@ for class_path, check_func in {
     'typing.FrozenSet': _instancecheck_iterable,
     'typing.KeysView': _instancecheck_iterable,
     'typing.ValuesView': _instancecheck_iterable,
+    'typing.Iterable': _instancecheck_iterable,
     'typing.AsyncIterable': _instancecheck_iterable,
 
     # mappings
@@ -83,21 +85,29 @@ def _instancecheck_callable(value, type_):
     if is_base_generic(type_):
         return True
 
-    param_types, ret_type = get_subtypes(type_)
-    sig = inspect.signature(value)
+    expected_types, ret_type = get_subtypes(type_)
+    sig = introspection.Signature.from_callable(value)
 
     missing_annotations = []
 
-    if param_types is not ...:
-        if len(param_types) != len(sig.parameters):
-            return False
-
+    if expected_types is not ...:
         # if any of the existing annotations don't match the type, we'll return False.
         # Then, if any annotations are missing, we'll throw an exception.
-        for param, expected_type in zip(sig.parameters.values(), param_types):
+        param_iter = iter(sig.parameters.values())
+        for expected_type in expected_types:
+            try:
+                param = next(param_iter)
+            except StopIteration:
+                return False
+
+            if param.kind is introspection.Parameter.VAR_POSITIONAL:
+                param_iter = iter([param])
+            elif param.kind in {introspection.Parameter.VAR_KEYWORD, introspection.Parameter.KEYWORD_ONLY}:
+                return False
+
             param_type = param.annotation
-            if param_type is inspect.Parameter.empty:
-                missing_annotations.append(param)
+            if param_type in {introspection.Parameter.empty, introspection.Parameter.missing}:
+                missing_annotations.append(param.name)
                 continue
 
             # FIXME: add support for TypeVars
@@ -107,14 +117,27 @@ def _instancecheck_callable(value, type_):
             if not is_subtype(param_type, expected_type):
                 return False
 
-    if sig.return_annotation is inspect.Signature.empty:
+        # make sure the remaining parameters are optional
+        for param in param_iter:
+            if not param.is_optional:
+                return False
+
+    if sig.return_annotation is introspection.Signature.empty:
         missing_annotations.append('return')
     else:
         if not is_subtype(sig.return_annotation, ret_type):
             return False
 
     if missing_annotations:
-        raise ValueError("Missing annotations: {}".format(missing_annotations))
+        seen = set()
+        missing_names = []
+        for param in missing_annotations:
+            if param in seen:
+                continue
+
+            missing_names.append(param)
+            seen.add(param)
+        raise ValueError("Missing annotations: {}".format(', '.join(missing_names)))
 
     return True
 
@@ -231,7 +254,7 @@ def is_instance(obj, type_):
         try:
             validator = _ORIGIN_TYPE_CHECKERS[base]
         except KeyError:
-            raise NotImplementedError("Cannot perform isinstance check for type {}".format(type_))
+            raise NotImplementedError("Cannot perform is_instance check for type {}".format(type_))
 
         type_args = get_subtypes(type_)
         return validator(obj, type_args)
