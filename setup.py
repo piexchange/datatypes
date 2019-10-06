@@ -25,7 +25,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/{}/{}".format(author, name),
     packages=packages,
-    install_requires=['introspection @ https://github.com/Aran-Fey/introspection.git#egg=introspection'],
+    install_requires=['introspection @ https://github.com/Aran-Fey/introspection/archive/release.zip#egg=introspection'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
