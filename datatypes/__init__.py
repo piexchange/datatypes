@@ -1,4 +1,6 @@
 
+__version__ = '1.0'
+
 from .converter import *
 from .types import *
 from .type_checks import *
