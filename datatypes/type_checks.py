@@ -224,6 +224,12 @@ _SPECIAL_INSTANCE_CHECKERS = {
 
 
 def is_instance(obj, type_):
+    if type(type_) is str:
+        if type_ == 'ellipsis':
+            return obj is ...
+        else:
+            raise ValueError('Cannot resolve forward reference {!r}'.format(type_))
+
     if type_.__module__ == 'typing':
         if _is_protocol(type_):
             return _instancecheck_protocol(obj, type_)

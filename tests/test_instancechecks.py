@@ -46,6 +46,10 @@ def test_any():
     assert is_instance(5, Any)
 
 
+def test_ellipsis():
+    assert is_instance(..., 'ellipsis')
+
+
 if 'Type' in globals():  # for some reason Type doesn't exist in 3.5.0 even though it's documented
     @pytest.mark.parametrize('value, type_, expected', [
         (int, Type, True),
